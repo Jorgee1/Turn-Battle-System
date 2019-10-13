@@ -5,52 +5,69 @@
 
 using namespace std;
 
+/* TODO:
+    Experience and Levles
+    More stats
+    More clases
+*/
+
 class Character{
     public:
 
-        Character(int max_hp=10){
-            MAX_HP = max_hp;
+    Character(){
+        NAME = "None";
+        MAX_HP = 1;
+        HP = MAX_HP;
+        ATTK = 0;
+        DEF = 0;
+        EXPEREIENCE = 0;
+        LEVEL = 1;
+    }
+
+    Character(string name, int max_hp, int attack, int defense, int level){
+        NAME = name;
+        MAX_HP = max_hp;
+        HP = MAX_HP;
+        ATTK = attack;
+        DEF = defense;
+        EXPEREIENCE = 0;
+        LEVEL = level;
+    }
+
+    ~Character(){}
+    
+    int get_hp() const { return HP; }
+
+    int get_attk() const { return ATTK; }
+
+    int get_max_hp() const { return MAX_HP; }
+
+    void set_hp(int value){
+        if (value < 0){
+            HP = 0;
+        }else if (value > MAX_HP){
             HP = MAX_HP;
-            ATTK = 2;
+        }else{
+            HP = value;
         }
+    }
 
-        int get_hp(){
-            return HP;
-        }
-
-        int get_attk(){
-            return ATTK;
-        }
-
-        int get_max_hp(){
-            return MAX_HP;
-        }
-
-        void set_hp(int value){
-            if (value > MAX_HP){
-                HP = MAX_HP;
-            }else{
-                HP = value;
-            }
- 
-            if (value < 0){
-                HP = 0;
-            }
-        }
-
-        string repr(){
-            return "<Character [" + to_string(HP) + "/" + to_string(MAX_HP) + "]>";
-        }
+    string repr() const{
+        return "<Character " + NAME + " : " + "[" + to_string(HP) + "/" + to_string(MAX_HP) + "]>";
+    }
 
     private:
-        int HP, MAX_HP, ATTK; 
+
+    string NAME;
+    int HP, MAX_HP, ATTK, DEF; 
+    int EXPEREIENCE;
+    int LEVEL;
 
 
 };
 
 void damage_entity(Character& atacker, Character& taker){
     int extra = 1 + (rand () % 2);
-    cout << sizeof(atacker) << endl;
     taker.set_hp(taker.get_hp() - (atacker.get_attk() + extra) );
 }
 
@@ -83,7 +100,11 @@ int main()
     bool SW = true;
     const int entity_n = 2;
     srand(time(0));
-    Character entity[entity_n];
+
+    Character player("Player", 10, 3, 1, 1);
+    Character enemy("Enemy", 10, 3, 1, 1);
+
+    Character entity[] = {player, enemy};
 
     while(SW){
         // Print characters
