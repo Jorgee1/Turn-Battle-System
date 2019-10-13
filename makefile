@@ -1,5 +1,5 @@
 CC = cl
-PROGRAM_NAME = main.exe
+PROGRAM_NAME = battle-system.exe
 FILE = main.cpp
 
 main: $(FILE)
