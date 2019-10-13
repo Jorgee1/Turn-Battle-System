@@ -40,6 +40,8 @@ class Character{
 
         int get_attk() const { return ATTK; }
 
+        int get_def() const { return DEF; }
+
         int get_max_hp() const { return MAX_HP; }
 
         void set_hp(int value){
@@ -69,6 +71,7 @@ class Character{
 class BattleSystem{
     public:
         BattleSystem(){
+            srand(time(0));
             Character e1, e2;
             entity[PLAYER] = e1;
             entity[ENEMY] = e2;
@@ -77,6 +80,7 @@ class BattleSystem{
         }
 
         BattleSystem(Character& player, Character& enemy){
+            srand(time(0));
             entity[PLAYER] = player;
             entity[ENEMY] = enemy;
             victory_count = 0;
@@ -84,20 +88,24 @@ class BattleSystem{
         }
 
         void player_attack(){
+            cout << "PLAYER ATTACK" << endl;
             attack_entity(PLAYER, ENEMY);
         }
 
         void player_heal(){
+            cout << "PLAYER HEALS" << endl;
             entity[PLAYER].set_hp(entity[PLAYER].get_hp() + RECUPERATE_AMOUNT);
+            cout << "Heals " << RECUPERATE_AMOUNT << " points of damage" << endl;
         }
 
         void enemy_attack(){
+            cout << "ENEMY ATTACK" << endl;
             attack_entity(ENEMY, PLAYER);
         }
 
         void display_characters(){
             for(int i=0; i<entity_number; i++){
-                cout << i << " - " << entity[i].repr() << endl;
+                cout << entity[i].repr() << endl;
             }
         }
 
@@ -141,61 +149,85 @@ class BattleSystem{
 
         void attack_entity(int attacker_id, int defender_id){
             int extra = 1 + (rand () % 2);
-            entity[defender_id].set_hp(entity[defender_id].get_hp() - (entity[attacker_id].get_attk() + extra) );
+            int damage = entity[attacker_id].get_attk() + extra - entity[defender_id].get_def();
+            cout << "Does " << damage << " points of damage" << endl;
+            entity[defender_id].set_hp(entity[defender_id].get_hp() - damage);
         }
 };
 
 class Menu{
+    public:
+        const int ATACK = 1;
+        const int RECUPERATE = 2;
+
+        const int YES = 1;
+        const int NO = 2;
+
+        void display_battle_options() const{
+            display_options(battle_options, n_options);
+        }
+
+        void display_bool_options() const{
+            display_options(bool_options, n_options);
+        }
+
+        int get_option(){
+            int opcion;
+            cin >> opcion;
+            return opcion;
+        }
+
     private:
-        int ATACK = 1;
-        int RECUPERATE = 2;
+        const static int n_options = 2;
+        const string battle_options[n_options] = {"ATACK", "HEAL"};
+        const string bool_options[n_options] = {"YES", "NO"};
+
+        void display_options(const string array[], int total) const{
+            string msg = "";
+            for(int i=0; i<total; i++){
+                msg += to_string(i+1) + " - " +  array[i];
+                if (i < total-1){
+                    msg += ", ";
+                }
+            }
+            cout << msg << endl;
+        }
+
 };
 
 int main()
 {
-    int opcion;
-    
-    int flag_continue;
-    int ATACK = 1;
-    int RECUPERATE = 2;
-
-    srand(time(0));
-
     Character player("Player", 10, 3, 1, 1);
     Character enemy("Enemy", 10, 3, 1, 1);
 
     BattleSystem battle(player, enemy);
+    Menu menu;
 
     while(true){
         // Print characters
         battle.display_characters();
+        menu.display_battle_options();
 
-        cout << "1-ATACK, 2-RECUPERATE" << endl;
-        cin >> opcion;
-
-        if(opcion==ATACK){
-            cout << "PLAYER ATTACK" << endl;
+        if(menu.get_option()==menu.ATACK){
             battle.player_attack();
         }else{
-            cout << "PLAYER RECUPERATES" << endl;
             battle.player_heal();
         }
-        cout << "ENEMY ATTACK" << endl;
+
         battle.enemy_attack();
 
         // Check entity HP
         if (battle.check_battle_end()){
             battle.display_vitory_count();
             cout << "Continue?" << endl;
-            cout << "1- YES, 2- NO" << endl;
-            cin >> flag_continue;
-            if (flag_continue ==  2){
+            menu.display_bool_options();
+            if (menu.get_option() ==  menu.NO){
                break;
+            }else{
+                battle.restore_characters();
             }
-            battle.restore_characters();
         }
     }
-
 
     cout << "GAME OVER" << endl;
     return 0;
