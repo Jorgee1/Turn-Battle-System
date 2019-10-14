@@ -4,12 +4,13 @@
 #include <string>
 
 /* TODO:
-    Experience and Levles
-    More stats
-    More clases
+    Inventario
+    Estado
 */
 
 using namespace std;
+
+
 
 class Character{
     public:
@@ -92,14 +93,15 @@ class Character{
             cout << endl;
         }
 
-    private:
-
+    
+    protected:
         string NAME;
         int HP, MAX_HP, ATTK, DEF; 
         int EXPEREIENCE;
         int NEXT_LEVEL;
         int LEVEL;
 
+    private:
         void level_up(){
             LEVEL += 1;
             MAX_HP += 5;
@@ -108,6 +110,140 @@ class Character{
             EXPEREIENCE = 0;
             NEXT_LEVEL += 2;
         }
+};
+
+class Menu{
+    public:
+        const int ATACK = 1;
+        const int HEAL = 2;
+        const int STATUS = 3;
+        const int INVENTORY = 4;
+
+        const int YES = 1;
+        const int NO = 2;
+
+        void display_battle_options() const{
+            display_options(battle_options, n_battle_options);
+        }
+
+        void display_bool_options() const{
+            display_options(bool_options, n_bool_options);
+        }
+
+        int get_option(){
+            int opcion;
+            cin >> opcion;
+            return opcion;
+        }
+
+    private:
+        const static int n_battle_options = 4;
+        const static int n_bool_options = 2;
+        const string battle_options[n_battle_options] = {"ATACK", "HEAL", "STATUS", "INVENTORY"};
+        const string bool_options[n_bool_options] = {"YES", "NO"};
+
+        void display_options(const string array[], int total) const{
+            string msg = "";
+            for(int i=0; i<total; i++){
+                msg += to_string(i+1) + " - " +  array[i];
+                if (i < total-1){
+                    msg += ", ";
+                }
+            }
+            cout << msg << endl;
+        }
+
+};
+
+class Item{
+    public:
+        Item(){
+            name = "";
+            id = -1;
+        }
+
+        Item(string item_name, int item_id){
+            name = item_name;
+            id = item_id;
+        }
+
+        void action(){}
+
+        string repr() const{
+            return "<Item " + name +">";
+        }
+    protected:
+        string name;
+        int id;
+};
+
+class NullItem: public Item{
+    public:
+        NullItem(){
+            name = "None";
+            id = 0;
+        }
+
+    private:
+};
+
+class Potion: public Item{
+    public:
+        Potion(){
+            name = "Potion";
+            id = 1;
+        }
+
+        void action(Character& character){
+            character.set_hp(character.get_hp() + HEAL_AMOUNT);
+        }
+    private:
+        int HEAL_AMOUNT = 5;
+};
+
+class Inventory{
+    public:
+        Inventory(){
+            for(int i=0; i<total_items; i++){
+                NullItem none;
+                items[i] = none;
+            }
+            Potion potion;
+            items[0] = potion;
+        }
+
+        string repr() const{
+            string temp = "<Inventory:\n";
+            for(int i=0; i<total_items; i++){
+                temp+= "    " + to_string(i) + " = " + items[i].repr() + "\n";
+            }
+            return temp + ">\n";
+        }
+
+    private:
+        static const int total_items = 5;
+        Item items[total_items];
+};
+
+
+
+class MainCharacter: public Character{
+    public:
+        MainCharacter(string name, int max_hp, int attack, int defense, int level){
+            NAME = name;
+            MAX_HP = max_hp;
+            HP = MAX_HP;
+            ATTK = attack;
+            DEF = defense;
+            EXPEREIENCE = 0;
+            NEXT_LEVEL = 10;
+            LEVEL = level;
+            cout << inventiry.repr();
+        }
+
+    private:
+        Inventory inventiry;
+
 };
 
 class BattleSystem{
@@ -204,53 +340,9 @@ class BattleSystem{
         }
 }; 
 
-class Menu{
-    public:
-        const int ATACK = 1;
-        const int HEAL = 2;
-        const int STATUS = 3;
-
-        const int YES = 1;
-        const int NO = 2;
-
-        void display_battle_options() const{
-            display_options(battle_options, n_battle_options);
-        }
-
-        void display_bool_options() const{
-            display_options(bool_options, n_bool_options);
-        }
-
-        int get_option(){
-            int opcion;
-            cin >> opcion;
-            return opcion;
-        }
-
-    private:
-        const static int n_battle_options = 3;
-        const static int n_bool_options = 2;
-        const string battle_options[n_battle_options] = {"ATACK", "HEAL", "STATUS"};
-        const string bool_options[n_bool_options] = {"YES", "NO"};
-
-        void display_options(const string array[], int total) const{
-            string msg = "";
-            for(int i=0; i<total; i++){
-                msg += to_string(i+1) + " - " +  array[i];
-                if (i < total-1){
-                    msg += ", ";
-                }
-            }
-            cout << msg << endl;
-        }
-
-};
-
-
-
 int main()
 {
-    Character player("Player", 10, 3, 1, 1);
+    MainCharacter player("Player", 10, 3, 1, 1);
     Character enemy("Enemy", 10, 3, 1, 1);
 
     BattleSystem battle(player, enemy);
@@ -270,6 +362,8 @@ int main()
         }else if(option==menu.HEAL){
             battle.player_heal();
             battle.enemy_attack();
+        }else if (option==menu.STATUS){
+            battle.display_player_stats();
         }else if (option==menu.STATUS){
             battle.display_player_stats();
         }else{
