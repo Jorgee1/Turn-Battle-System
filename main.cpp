@@ -6,14 +6,13 @@
 #include "Character.h"
 #include "Inventory.h"
 
+using namespace std;
+
 
 /* TODO:
     Inventario
     Estado
 */
-
-using namespace std;
-
 
 class Menu{
     public:
@@ -171,8 +170,7 @@ class BattleSystem{
         }
 }; 
 
-int main()
-{
+int main(){
     MainCharacter player("Player", 10, 3, 1, 1);
     Character enemy("Enemy", 10, 3, 1, 1);
 

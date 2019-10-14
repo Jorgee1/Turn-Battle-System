@@ -6,7 +6,7 @@
 using namespace std;
 
 #ifndef CHARACTER_H
-#define CHARATCER_H
+#define CHARACTER_H
 
 class Character{
     public:
