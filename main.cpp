@@ -3,6 +3,10 @@
 #include <ctime>
 #include <string>
 
+#include "Character.h"
+#include "Inventory.h"
+
+
 /* TODO:
     Inventario
     Estado
@@ -10,107 +14,6 @@
 
 using namespace std;
 
-
-
-class Character{
-    public:
-
-        Character(){
-            NAME = "None";
-            MAX_HP = 1;
-            HP = MAX_HP;
-            ATTK = 0;
-            DEF = 0;
-            EXPEREIENCE = 0;
-            NEXT_LEVEL = 10;
-            LEVEL = 1;
-        }
-
-        Character(string name, int max_hp, int attack, int defense, int level){
-            NAME = name;
-            MAX_HP = max_hp;
-            HP = MAX_HP;
-            ATTK = attack;
-            DEF = defense;
-            EXPEREIENCE = 0;
-            NEXT_LEVEL = 10;
-            LEVEL = level;
-        }
-
-        ~Character(){}
-        
-        int get_hp() const { return HP; }
-
-        int get_max_hp() const { return MAX_HP; }
-
-        int get_attk() const { return ATTK; }
-
-        int get_def() const { return DEF; }
-
-        int get_exp() const { return EXPEREIENCE; };
-
-        string get_name() const { return NAME; };
-
-        int get_next_level_exp() const { return NEXT_LEVEL; };
-   
-        void set_hp(int value){
-            if (value < 0){
-                HP = 0;
-            }else if (value > MAX_HP){
-                HP = MAX_HP;
-            }else{
-                HP = value;
-            }
-        }
-
-        string repr() const{
-            return "<Character " + NAME + " : " + "[" + to_string(HP) + "/" + 
-            to_string(MAX_HP) + "]  LVL " + to_string(LEVEL) + ">";
-        }
-
-        void add_exp(int value){
-            while(value>0){
-                if (NEXT_LEVEL > value + EXPEREIENCE){
-                    EXPEREIENCE += value;
-                    value = 0;
-                }else{
-                    value = value - NEXT_LEVEL + EXPEREIENCE;
-                    EXPEREIENCE += NEXT_LEVEL;
-                    
-                    level_up();
-                }
-            }
-            
-        }
-
-        void display_character_stats() const{
-            cout << endl;
-            cout << get_name() << " - LEVEL: " << LEVEL << endl;
-            cout << "HP      : " << get_hp() << " / " << get_max_hp() << endl;
-            cout << "ATACK   : " << get_attk() << endl;
-            cout << "DEFENCE : " << get_def() << endl;
-            cout << "EXP     : " << get_exp() << "/" << get_next_level_exp() << endl;
-            cout << endl;
-        }
-
-    
-    protected:
-        string NAME;
-        int HP, MAX_HP, ATTK, DEF; 
-        int EXPEREIENCE;
-        int NEXT_LEVEL;
-        int LEVEL;
-
-    private:
-        void level_up(){
-            LEVEL += 1;
-            MAX_HP += 5;
-            ATTK += 1;
-            DEF += 1;
-            EXPEREIENCE = 0;
-            NEXT_LEVEL += 2;
-        }
-};
 
 class Menu{
     public:
@@ -154,78 +57,6 @@ class Menu{
         }
 
 };
-
-class Item{
-    public:
-        Item(){
-            name = "";
-            id = -1;
-        }
-
-        Item(string item_name, int item_id){
-            name = item_name;
-            id = item_id;
-        }
-
-        void action(){}
-
-        string repr() const{
-            return "<Item " + name +">";
-        }
-    protected:
-        string name;
-        int id;
-};
-
-class NullItem: public Item{
-    public:
-        NullItem(){
-            name = "None";
-            id = 0;
-        }
-
-    private:
-};
-
-class Potion: public Item{
-    public:
-        Potion(){
-            name = "Potion";
-            id = 1;
-        }
-
-        void action(Character& character){
-            character.set_hp(character.get_hp() + HEAL_AMOUNT);
-        }
-    private:
-        int HEAL_AMOUNT = 5;
-};
-
-class Inventory{
-    public:
-        Inventory(){
-            for(int i=0; i<total_items; i++){
-                NullItem none;
-                items[i] = none;
-            }
-            Potion potion;
-            items[0] = potion;
-        }
-
-        string repr() const{
-            string temp = "<Inventory:\n";
-            for(int i=0; i<total_items; i++){
-                temp+= "    " + to_string(i) + " = " + items[i].repr() + "\n";
-            }
-            return temp + ">\n";
-        }
-
-    private:
-        static const int total_items = 5;
-        Item items[total_items];
-};
-
-
 
 class MainCharacter: public Character{
     public:
