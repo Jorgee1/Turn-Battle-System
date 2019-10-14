@@ -196,6 +196,9 @@ class BattleSystem{
         void attack_entity(int attacker_id, int defender_id){
             int extra = 1 + (rand () % 2);
             int damage = entity[attacker_id].get_attk() + extra - entity[defender_id].get_def();
+            if (damage < 0){
+                damage = 0;
+            }
             cout << "Does " << damage << " points of damage" << endl;
             entity[defender_id].set_hp(entity[defender_id].get_hp() - damage);
         }
