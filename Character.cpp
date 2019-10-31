@@ -79,13 +79,12 @@ Status Hero::get_next_level_exp() const { return character_stats[NEXT_LEVEL]; };
 
 void Hero::add_exp(int value){
     while(value>0){
-        if (character_stats[NEXT_LEVEL].get_value() > value + character_stats[EXPEREIENCE].get_value()){
+        if(value >= character_stats[NEXT_LEVEL].get_value()-character_stats[EXPEREIENCE].get_value()){
+            value = value - (character_stats[NEXT_LEVEL].get_value()-character_stats[EXPEREIENCE].get_value());
+            level_up();
+        }else{
             character_stats[EXPEREIENCE].add_value(value);
             value = 0;
-        }else{
-            value = value - character_stats[NEXT_LEVEL].get_value() + character_stats[EXPEREIENCE].get_value();
-            character_stats[EXPEREIENCE].add_value(character_stats[NEXT_LEVEL].get_value());
-            level_up();
         }
     }
     
@@ -96,7 +95,7 @@ void Hero::level_up(){
     character_stats[MAX_HP].add_value(5);
     character_stats[ATTACK].add_value(1);
     character_stats[DEFFENCE].add_value(1);
-    character_stats[EXPEREIENCE].add_value(0);
+    character_stats[EXPEREIENCE].set_value(0);
     character_stats[NEXT_LEVEL].add_value(2);
 }
 

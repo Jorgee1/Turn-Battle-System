@@ -283,24 +283,21 @@ class BattleSystem{
             defeat_count = 0;
         }
 
-        void player_attack(){
-            cout << "PLAYER ATTACK" << endl;
+        string player_attack(){
             int damage = damage_formula(player.get_attk().get_value(), monster.get_def().get_value());
-            cout << "Does " << damage << " points of damage" << endl;
             monster.set_hp(monster.get_hp().get_value() - damage);
+            return "PLAYER ATTACK, Does " + to_string(damage) + " points of damage";
         }
 
-        void enemy_attack(){
-            cout << "ENEMY ATTACK" << endl;
+        string enemy_attack(){ 
             int damage = damage_formula(monster.get_attk().get_value(), player.get_def().get_value());
-            cout << "Does " << damage << " points of damage" << endl;
             player.set_hp(player.get_hp().get_value() - damage);
+            return "ENEMY ATTACK, Does " + to_string(damage) + " points of damage";            
         }
 
-        void player_heal(){
-            cout << "PLAYER HEALS" << endl;
+        string player_heal(){
             player.set_hp(player.get_hp().get_value() + RECUPERATE_AMOUNT);
-            cout << "Heals " << RECUPERATE_AMOUNT << " points of damage" << endl;
+            return "PLAYER HEALS, Heals " + to_string(RECUPERATE_AMOUNT) + " points of damage";
         }
 
         void display_characters(int x, int y, TextureText temp_texture, SDL_Color color){
@@ -395,15 +392,23 @@ int main(int argc, char* args[] ){
     bool key_lock_down = false;
     bool key_lock_enter = false;
 
+    vector<string> mesages;
+
     while(window.check_exit()){
 
         window.clear_screen();
 
         battle.display_characters(0, 0, text, black_color);
 
-        menu.display_battle_options(0, 300, text, textBold, black_color);
+        menu.display_battle_options(0, 50, text, textBold, black_color);
 
         // Get input
+        int acc = 0;
+        for(int i=0;i<mesages.size();i++){
+            text.create_text_texture(mesages[i], black_color);
+            text.render(0, 70 + acc);
+            acc = acc + text.h + 10;
+        }
                 
         currentKeyStates = SDL_GetKeyboardState( NULL );
 
@@ -417,11 +422,13 @@ int main(int argc, char* args[] ){
 
         if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
             if(menu.get_selector()==menu.ATACK){
-                battle.player_attack();
-                battle.enemy_attack();
+                mesages.clear();
+                mesages.push_back(battle.player_attack());
+                mesages.push_back(battle.enemy_attack());
             }else if(menu.get_selector()==menu.HEAL){
-                battle.player_heal();
-                battle.enemy_attack();
+                mesages.clear();
+                mesages.push_back(battle.player_heal());
+                mesages.push_back(battle.enemy_attack());
             }else if (menu.get_selector()==menu.STATUS){
                 battle.display_player_stats();
             }
