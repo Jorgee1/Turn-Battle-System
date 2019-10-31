@@ -532,11 +532,8 @@ int main(int argc, char* args[] ){
         if(( !currentKeyStates[ SDL_SCANCODE_RETURN ] ) && (key_lock_enter)){
             key_lock_enter = false;
         }
-
-
-        
+       
         window.update_screen();
     }
-    cout << "GAME OVER" << endl;
     return 0;
 }
