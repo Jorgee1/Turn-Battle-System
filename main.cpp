@@ -69,10 +69,10 @@ class Window{
             {
                 if( e.type == SDL_QUIT )
                 {
-                    return false;
+                    return true;
                 }
             }
-            return true;
+            return false;
         }
 
         void clear_screen(){
@@ -205,13 +205,13 @@ class Menu{
         const int HEAL = 1;
         const int STATUS = 2;
 
-        const int YES = 1;
-        const int NO = 2;
+        const int YES = 0;
+        const int NO = 1;
 
         void display_battle_options(int x, int y, TextureText textNormal, TextureText textBold, SDL_Color color) const{
             int acc = 0;
             int padding = 20;
-            for (int i=0; i<n_battle_options; i++){
+            for (int i=0; i<battle_options.size(); i++){
                 if (i==selector){
                     textBold.create_text_texture(battle_options[i].c_str(), color);
                     textBold.render(x + acc, y);
@@ -224,12 +224,8 @@ class Menu{
             }
         }
 
-        void display_bool_options() const{
-            display_options(bool_options, n_bool_options);
-        }
-
         void next_option(){
-            if(selector < n_battle_options - 1){
+            if(selector < battle_options.size() - 1){
                 selector++;
             }
         }
@@ -244,23 +240,28 @@ class Menu{
             return selector;
         }
 
+        void next_binary_option(){
+            if(binary_selector < bool_options.size() - 1){
+                binary_selector++;
+            }
+        }
+
+        void previews_binary_option(){
+            if(binary_selector > 0){
+                binary_selector--;
+            }            
+        }
+
+        int get_binary_selector(){
+            return binary_selector;
+        }
+
+        const vector<string> battle_options = {"ATACK", "HEAL", "STATUS"};
+        const vector<string> bool_options = {"YES", "NO"};
+
     private:
         int selector = 0;
-        const static int n_battle_options = 3;
-        const static int n_bool_options = 2;
-        const string battle_options[n_battle_options] = {"ATACK", "HEAL", "STATUS"};
-        const string bool_options[n_bool_options] = {"YES", "NO"};
-
-        void display_options(const string array[], int total) const{
-            string msg = "";
-            for(int i=0; i<total; i++){
-                msg += to_string(i+1) + " - " +  array[i];
-                if (i < total-1){
-                    msg += ", ";
-                }
-            }
-            cout << msg << endl;
-        }
+        int binary_selector = 0;
 
 };
 
@@ -370,6 +371,11 @@ class BattleSystem{
 
 int main(int argc, char* args[] ){
 
+    int LAYOUT_COMBAT = 0;
+    int LAYOUT_STATUS = 1;
+    int LAYOUT_GAME_OVER = 2;
+    int layout_current = 0;
+
     srand(time(0));
     Hero player;
     Monster enemy;
@@ -393,52 +399,126 @@ int main(int argc, char* args[] ){
     bool key_lock_enter = false;
 
     vector<string> mesages;
+    bool exit = false;
+    int acc = 0;
+    while(!exit){
+        if(window.check_exit()){
 
-    while(window.check_exit()){
+            exit = true;
+        }
 
         window.clear_screen();
 
-        battle.display_characters(0, 0, text, black_color);
+        // Normal battle layout
+        if (layout_current == LAYOUT_COMBAT){
+            battle.display_characters(0, 0, text, black_color);
 
-        menu.display_battle_options(0, 50, text, textBold, black_color);
+            menu.display_battle_options(0, 50, text, textBold, black_color);
 
-        // Get input
-        int acc = 0;
-        for(int i=0;i<mesages.size();i++){
-            text.create_text_texture(mesages[i], black_color);
-            text.render(0, 70 + acc);
+            // Get input
+            acc = 0;
+            for(int i=0;i<mesages.size();i++){
+                text.create_text_texture(mesages[i], black_color);
+                text.render(0, 70 + acc);
+                acc = acc + text.h + 10;
+            }
+        }else if (layout_current == LAYOUT_STATUS){
+            acc = 0;
+            text.create_text_texture(player.get_name().c_str(), black_color);
+            text.render(0, 0+acc);
+            acc = acc + text.h;
+            vector<Status> player_status = player.get_stats();
+            for(int i=0; i<player_status.size(); i++){
+                string temp_text = player_status[i].get_name() + ": " + to_string(player_status[i].get_value());
+                
+                text.create_text_texture(temp_text.c_str(), black_color);
+                text.render(0,0+acc);
+                acc = acc + text.h;
+            }
+
+        }else if(layout_current == LAYOUT_GAME_OVER){
+            text.create_text_texture("GAME OVER", black_color);
+            text.render(0, 0);
+            int acc = text.h;
+            
+            text.create_text_texture("Continue?", black_color);
+            text.render(0, 0 + acc);
             acc = acc + text.h + 10;
+
+            int x_acc = 0;
+            for(int i=0; i<menu.bool_options.size();i++){
+                if(i==menu.get_binary_selector()){
+                    textBold.create_text_texture(menu.bool_options[i], black_color);
+                    textBold.render(0 + x_acc, 0 + text.h + acc);
+                    x_acc = x_acc + textBold.w + 10;
+                }else{
+                    text.create_text_texture(menu.bool_options[i], black_color);
+                    text.render(0 + x_acc, 0 + text.h + acc);
+                    x_acc = x_acc + text.w + 10;
+                }
+            }
+
         }
+
                 
         currentKeyStates = SDL_GetKeyboardState( NULL );
 
-        if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
-            menu.next_option();
-            key_lock_up = true;
-        }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
-            menu.previews_option();
-            key_lock_down = true;
-        }
-
-        if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
-            if(menu.get_selector()==menu.ATACK){
-                mesages.clear();
-                mesages.push_back(battle.player_attack());
-                mesages.push_back(battle.enemy_attack());
-            }else if(menu.get_selector()==menu.HEAL){
-                mesages.clear();
-                mesages.push_back(battle.player_heal());
-                mesages.push_back(battle.enemy_attack());
-            }else if (menu.get_selector()==menu.STATUS){
-                battle.display_player_stats();
+        if (layout_current == LAYOUT_COMBAT){
+            if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
+                menu.next_option();
+                key_lock_up = true;
+            }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
+                menu.previews_option();
+                key_lock_down = true;
             }
 
-            if (battle.check_battle_end()){
-                battle.display_vitory_count();
-                battle.restore_characters();
+            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
+                if(menu.get_selector()==menu.ATACK){
+                    mesages.clear();
+                    mesages.push_back(battle.player_attack());
+                    mesages.push_back(battle.enemy_attack());
+                }else if(menu.get_selector()==menu.HEAL){
+                    mesages.clear();
+                    mesages.push_back(battle.player_heal());
+                    mesages.push_back(battle.enemy_attack());
+                }else if (menu.get_selector()==menu.STATUS){
+                    layout_current = LAYOUT_STATUS;
+                }
+
+                if (battle.check_battle_end()){
+                    battle.display_vitory_count();
+                    battle.restore_characters();
+                    layout_current = LAYOUT_GAME_OVER;
+                }
+
+                key_lock_enter = true;
+            }
+        }else if (layout_current == LAYOUT_STATUS){
+            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
+                layout_current = LAYOUT_COMBAT;
+                key_lock_enter = true;
+            }
+        }else if (layout_current == LAYOUT_GAME_OVER){
+            if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
+                menu.next_binary_option();
+                key_lock_up = true;
+            }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
+                menu.previews_binary_option();
+                key_lock_down = true;
             }
 
-            key_lock_enter = true;
+            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
+                printf("%i\n", menu.get_binary_selector());
+                if(menu.get_binary_selector() == menu.YES){
+                    layout_current = LAYOUT_COMBAT;
+                    mesages.clear();
+                }else if(menu.get_binary_selector() == menu.NO){
+                    exit = true;
+                }
+                key_lock_enter = true;
+            }
+
+
         }
 
         if(( !currentKeyStates[ SDL_SCANCODE_RIGHT ] ) && (key_lock_up)){
@@ -456,36 +536,6 @@ int main(int argc, char* args[] ){
 
         
         window.update_screen();
-        /*
-            battle.display_characters();
-            menu.display_battle_options();
-
-            option = menu.get_option();
-            if(option==menu.ATACK){
-                battle.player_attack();
-                battle.enemy_attack();
-            }else if(option==menu.HEAL){
-                battle.player_heal();
-                battle.enemy_attack();
-            }else if (option==menu.STATUS){
-                battle.display_player_stats();
-            }else{
-                cout << "Command Error" << endl;
-            }
-
-            
-            if (battle.check_battle_end()){
-                battle.display_vitory_count();
-                cout << "Continue?" << endl;
-                menu.display_bool_options();
-                option = menu.get_option();
-                if (option ==  menu.NO){
-                    break;
-                }else{
-                    battle.restore_characters();
-                }
-            }
-        */
     }
     cout << "GAME OVER" << endl;
     return 0;
