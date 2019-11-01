@@ -141,25 +141,48 @@ class Texture{
         }
 };
 
-class TextureText: public Texture{
+class Font{
     public:
-        TTF_Font* font;
+        TTF_Font *font;
+        SDL_Color color;
+        int text_size;
 
-        TextureText(){
+        Font(){
             font = NULL;
+            color = {0,0,0};
+            text_size = 0;
         }
 
-        TextureText(SDL_Renderer* renderer, TTF_Font* font){
-            texture = NULL;
-            h = 0;
-            w = 0;
+        Font(string path, SDL_Color color, int size){
+            this->color = color;
+            text_size = size;
+            font = TTF_OpenFont(path.c_str(), text_size);
+            if( font == NULL ){
+                printf( "Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError() );
+            }
+        }
+
+        ~Font(){
+            if(font != NULL){
+                TTF_CloseFont(font);
+                font = NULL;
+                text_size = 0;
+            }
+        }
+};
+
+class TextureText: public Texture{
+    public:
+        Font *font;
+
+        TextureText(SDL_Renderer* renderer, Font *font){
             this->renderer = renderer;
             this->font = font;
         }
 
-        void create_text_texture(string text, SDL_Color textColor){
+        void create_text_texture(string text){
             free();
-            SDL_Surface* temp_surface = TTF_RenderText_Blended(font, text.c_str(), textColor);
+            SDL_Surface* temp_surface = TTF_RenderText_Blended(font->font, text.c_str(), font->color);
             if( temp_surface == NULL )
             {
                 printf("Unable to create text! SDL_TTF Error: %s\n", TTF_GetError());
@@ -169,35 +192,13 @@ class TextureText: public Texture{
                     printf( "Unable to create texture! SDL Error: %s\n", SDL_GetError() );
                 }else{
                     SDL_QueryTexture(texture, NULL, NULL, &w, &h);
-                    w = w;
-                    h = h;
                     SDL_FreeSurface(temp_surface);
                 }
             }
         }
 };
 
-class Font{
-    public:
-        TTF_Font *font;
 
-        Font(){
-            font = NULL;
-        }
-
-        Font(string path, int size){
-            font = TTF_OpenFont(path.c_str(), size);
-            if( font == NULL ){
-                printf( "Failed to load lazy font! SDL_ttf Error: %s\n", TTF_GetError() );
-            }
-        }
-
-        ~Font(){
-            TTF_CloseFont(font);
-        }
-
-        
-};
 
 class Menu{
     public:
@@ -208,16 +209,16 @@ class Menu{
         const int YES = 0;
         const int NO = 1;
 
-        void display_battle_options(int x, int y, TextureText textNormal, TextureText textBold, SDL_Color color) const{
+        void display_battle_options(int x, int y, TextureText &textNormal, TextureText &textBold) const{
             int acc = 0;
             int padding = 20;
             for (int i=0; i<battle_options.size(); i++){
                 if (i==selector){
-                    textBold.create_text_texture(battle_options[i].c_str(), color);
+                    textBold.create_text_texture(battle_options[i].c_str());
                     textBold.render(x + acc, y);
                     acc = acc + x + textBold.w + padding;
                 }else{
-                    textNormal.create_text_texture(battle_options[i].c_str(), color);
+                    textNormal.create_text_texture(battle_options[i].c_str());
                     textNormal.render(x + acc, y);
                     acc = acc + x + textNormal.w + padding;
                 }
@@ -265,7 +266,6 @@ class Menu{
 
 };
 
-
 class BattleSystem{
     public:
         BattleSystem(){
@@ -301,10 +301,10 @@ class BattleSystem{
             return "PLAYER HEALS, Heals " + to_string(RECUPERATE_AMOUNT) + " points of damage";
         }
 
-        void display_characters(int x, int y, TextureText temp_texture, SDL_Color color){
-            temp_texture.create_text_texture(player.repr(), color);
+        void display_characters(int x, int y, TextureText &temp_texture){
+            temp_texture.create_text_texture(player.repr());
             temp_texture.render(x, y);
-            temp_texture.create_text_texture(monster.repr(), color);
+            temp_texture.create_text_texture(monster.repr());
             temp_texture.render(x, y + temp_texture.h);
             
             y+=2*temp_texture.h;
@@ -385,15 +385,19 @@ int main(int argc, char* args[] ){
     Window window("Test", 800, 600);
     BattleSystem battle(player, enemy);
     Menu menu;
+
+
+    // Load Media
     SDL_Color black_color = { 0, 0, 0 };
-    Font normal_font("fonts/LiberationMono-Regular.ttf", 18);
-    Font bold_font("fonts/LiberationMono-Bold.ttf", 18);
 
-    TextureText text(window.get_render(), normal_font.font);
-    TextureText textBold(window.get_render(), bold_font.font);
 
+    Font normal_black_font("fonts/LiberationMono-Regular.ttf", black_color, 18);
+    Font bold_black_font("fonts/LiberationMono-Bold.ttf", black_color, 18);
+
+    static TextureText black_text(window.get_render(), &normal_black_font);
+    static TextureText black_text_bold(window.get_render(), &bold_black_font);
+    
     const Uint8* currentKeyStates = NULL;
-
     bool key_lock_up = false;
     bool key_lock_down = false;
     bool key_lock_enter = false;
@@ -403,137 +407,138 @@ int main(int argc, char* args[] ){
     int acc = 0;
     while(!exit){
         if(window.check_exit()){
-
             exit = true;
-        }
+        }else{
+            window.clear_screen();
 
-        window.clear_screen();
-
-        // Normal battle layout
-        if (layout_current == LAYOUT_COMBAT){
-            battle.display_characters(0, 0, text, black_color);
-
-            menu.display_battle_options(0, 50, text, textBold, black_color);
-
-            // Get input
-            acc = 0;
-            for(int i=0;i<mesages.size();i++){
-                text.create_text_texture(mesages[i], black_color);
-                text.render(0, 70 + acc);
-                acc = acc + text.h + 10;
-            }
-        }else if (layout_current == LAYOUT_STATUS){
-            acc = 0;
-            text.create_text_texture(player.get_name().c_str(), black_color);
-            text.render(0, 0+acc);
-            acc = acc + text.h;
-            vector<Status> player_status = player.get_stats();
-            for(int i=0; i<player_status.size(); i++){
-                string temp_text = player_status[i].get_name() + ": " + to_string(player_status[i].get_value());
-                
-                text.create_text_texture(temp_text.c_str(), black_color);
-                text.render(0,0+acc);
-                acc = acc + text.h;
-            }
-
-        }else if(layout_current == LAYOUT_GAME_OVER){
-            text.create_text_texture("GAME OVER", black_color);
-            text.render(0, 0);
-            int acc = text.h;
             
-            text.create_text_texture("Continue?", black_color);
-            text.render(0, 0 + acc);
-            acc = acc + text.h + 10;
+            // Normal battle layout
+            if (layout_current == LAYOUT_COMBAT){
+                battle.display_characters(0, 0, black_text);
+                menu.display_battle_options(0, 50, black_text, black_text_bold);
 
-            int x_acc = 0;
-            for(int i=0; i<menu.bool_options.size();i++){
-                if(i==menu.get_binary_selector()){
-                    textBold.create_text_texture(menu.bool_options[i], black_color);
-                    textBold.render(0 + x_acc, 0 + text.h + acc);
-                    x_acc = x_acc + textBold.w + 10;
-                }else{
-                    text.create_text_texture(menu.bool_options[i], black_color);
-                    text.render(0 + x_acc, 0 + text.h + acc);
-                    x_acc = x_acc + text.w + 10;
+                // Get input
+                acc = 0;
+                for(int i=0;i<mesages.size();i++){
+                    black_text.create_text_texture(mesages[i]);
+                    black_text.render(0, 70 + acc);
+                    acc = acc + black_text.h + 10;
                 }
-            }
+            }else if (layout_current == LAYOUT_STATUS){
+                acc = 0;
+                black_text.create_text_texture(player.get_name().c_str());
+                black_text.render(0, 0+acc);
+                acc = acc + black_text.h;
+                vector<Status> player_status = player.get_stats();
+                for(int i=0; i<player_status.size(); i++){
+                    string temp_text = player_status[i].get_name() + ": " + to_string(player_status[i].get_value());
+                    
+                    black_text.create_text_texture(temp_text.c_str());
+                    black_text.render(0,0+acc);
+                    acc = acc + black_text.h;
+                }
 
-        }
-
+            }else if(layout_current == LAYOUT_GAME_OVER){
+                black_text.create_text_texture("GAME OVER");
+                black_text.render(0, 0);
+                int acc = black_text.h;
                 
-        currentKeyStates = SDL_GetKeyboardState( NULL );
+                black_text.create_text_texture("Continue?");
+                black_text.render(0, 0 + acc);
+                acc = acc + black_text.h + 10;
 
-        if (layout_current == LAYOUT_COMBAT){
-            if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
-                menu.next_option();
-                key_lock_up = true;
-            }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
-                menu.previews_option();
-                key_lock_down = true;
-            }
-
-            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
-                if(menu.get_selector()==menu.ATACK){
-                    mesages.clear();
-                    mesages.push_back(battle.player_attack());
-                    mesages.push_back(battle.enemy_attack());
-                }else if(menu.get_selector()==menu.HEAL){
-                    mesages.clear();
-                    mesages.push_back(battle.player_heal());
-                    mesages.push_back(battle.enemy_attack());
-                }else if (menu.get_selector()==menu.STATUS){
-                    layout_current = LAYOUT_STATUS;
+                int x_acc = 0;
+                for(int i=0; i<menu.bool_options.size();i++){
+                    if(i==menu.get_binary_selector()){
+                        black_text_bold.create_text_texture(menu.bool_options[i]);
+                        black_text_bold.render(0 + x_acc, 0 + black_text_bold.h + acc);
+                        x_acc = x_acc + black_text_bold.w + 10;
+                    }else{
+                        black_text.create_text_texture(menu.bool_options[i]);
+                        black_text.render(0 + x_acc, 0 + black_text.h + acc);
+                        x_acc = x_acc + black_text.w + 10;
+                    }
                 }
 
-                if (battle.check_battle_end()){
-                    battle.display_vitory_count();
-                    battle.restore_characters();
-                    layout_current = LAYOUT_GAME_OVER;
+            }
+
+                    
+            currentKeyStates = SDL_GetKeyboardState( NULL );
+
+            if (layout_current == LAYOUT_COMBAT){
+                if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
+                    menu.next_option();
+                    key_lock_up = true;
+                }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
+                    menu.previews_option();
+                    key_lock_down = true;
                 }
 
-                key_lock_enter = true;
-            }
-        }else if (layout_current == LAYOUT_STATUS){
-            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
-                layout_current = LAYOUT_COMBAT;
-                key_lock_enter = true;
-            }
-        }else if (layout_current == LAYOUT_GAME_OVER){
-            if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
-                menu.next_binary_option();
-                key_lock_up = true;
-            }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
-                menu.previews_binary_option();
-                key_lock_down = true;
-            }
+                if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
+                    if(menu.get_selector()==menu.ATACK){
+                        mesages.clear();
+                        mesages.push_back(battle.player_attack());
+                        mesages.push_back(battle.enemy_attack());
+                    }else if(menu.get_selector()==menu.HEAL){
+                        mesages.clear();
+                        mesages.push_back(battle.player_heal());
+                        mesages.push_back(battle.enemy_attack());
+                    }else if (menu.get_selector()==menu.STATUS){
+                        layout_current = LAYOUT_STATUS;
+                    }
 
-            if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
-                printf("%i\n", menu.get_binary_selector());
-                if(menu.get_binary_selector() == menu.YES){
+                    if (battle.check_battle_end()){
+                        battle.display_vitory_count();
+                        battle.restore_characters();
+                        layout_current = LAYOUT_GAME_OVER;
+                    }
+
+                    key_lock_enter = true;
+                }
+            }else if (layout_current == LAYOUT_STATUS){
+                if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
                     layout_current = LAYOUT_COMBAT;
-                    mesages.clear();
-                }else if(menu.get_binary_selector() == menu.NO){
-                    exit = true;
+                    key_lock_enter = true;
                 }
-                key_lock_enter = true;
+            }else if (layout_current == LAYOUT_GAME_OVER){
+                if( (currentKeyStates[ SDL_SCANCODE_RIGHT ]) && (!key_lock_up) ){
+                    menu.next_binary_option();
+                    key_lock_up = true;
+                }else if( (currentKeyStates[ SDL_SCANCODE_LEFT ]) && (!key_lock_down) ){
+                    menu.previews_binary_option();
+                    key_lock_down = true;
+                }
+
+                if( (currentKeyStates[ SDL_SCANCODE_RETURN ]) && (!key_lock_enter) ){
+                    printf("%i\n", menu.get_binary_selector());
+                    if(menu.get_binary_selector() == menu.YES){
+                        layout_current = LAYOUT_COMBAT;
+                        mesages.clear();
+                    }else if(menu.get_binary_selector() == menu.NO){
+                        exit = true;
+                    }
+                    key_lock_enter = true;
+                }
+
+
             }
 
+            if(( !currentKeyStates[ SDL_SCANCODE_RIGHT ] ) && (key_lock_up)){
+                key_lock_up = false;
+            }
 
+            if(( !currentKeyStates[ SDL_SCANCODE_LEFT ] ) && (key_lock_down)){
+                key_lock_down = false;
+            }
+
+            if(( !currentKeyStates[ SDL_SCANCODE_RETURN ] ) && (key_lock_enter)){
+                key_lock_enter = false;
+            }
+        
+            window.update_screen();
         }
 
-        if(( !currentKeyStates[ SDL_SCANCODE_RIGHT ] ) && (key_lock_up)){
-            key_lock_up = false;
-        }
 
-        if(( !currentKeyStates[ SDL_SCANCODE_LEFT ] ) && (key_lock_down)){
-            key_lock_down = false;
-        }
-
-        if(( !currentKeyStates[ SDL_SCANCODE_RETURN ] ) && (key_lock_enter)){
-            key_lock_enter = false;
-        }
-       
-        window.update_screen();
     }
     return 0;
 }
