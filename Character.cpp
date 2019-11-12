@@ -63,6 +63,10 @@ Hero::Hero(){
     character_stats.push_back(Status("Next Level", 10));
 }
 
+Hero::Hero(string name, int max_hp, int attack, int defense, int level){
+    init(name, max_hp, attack, defense, level);
+}
+
 void Hero::init(string name, int max_hp, int attack, int defense, int level){
     NAME = name;
     character_stats[HP].set_value(max_hp);

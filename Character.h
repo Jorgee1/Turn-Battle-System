@@ -57,6 +57,7 @@ class Hero: public Character{
         int NEXT_LEVEL  = 5;
 
         Hero();
+        Hero(string, int, int, int, int);
         void init(string, int, int, int, int);
         void add_exp(int);
         Status get_exp() const;

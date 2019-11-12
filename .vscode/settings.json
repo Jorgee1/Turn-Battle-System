@@ -40,6 +40,8 @@
         "xmemory": "cpp",
         "xstddef": "cpp",
         "xutility": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "iterator": "cpp",
+        "xtree": "cpp"
     }
 }
