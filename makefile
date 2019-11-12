@@ -1,7 +1,5 @@
 CXX = cl
 
-LINK = linker.exe
-
 GLOBAL_LIBRARY_PATH = D:\Programacion\Librerias
 
 SDL_PATH = $(GLOBAL_LIBRARY_PATH)\SDL2-2.0.10
