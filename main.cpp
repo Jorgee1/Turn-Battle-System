@@ -26,77 +26,11 @@ using namespace std;
     Inventario
 */
 
-
-class Menu{
-    public:
-        const int ATACK = 0;
-        const int HEAL = 1;
-        const int STATUS = 2;
-
-        const int YES = 0;
-        const int NO = 1;
-
-        void display_battle_options(int x, int y, TextureText &textNormal, TextureText &textBold) const{
-            int acc = 0;
-            int padding = 20;
-            for (int i=0; i<battle_options.size(); i++){
-                if (i==selector){
-                    textBold.create_texture(battle_options[i]);
-                    textBold.render(x + acc, y);
-                    acc = acc + x + textBold.rect.w + padding;
-                }else{
-                    textNormal.create_texture(battle_options[i]);
-                    textNormal.render(x + acc, y);
-                    acc = acc + x + textNormal.rect.w + padding;
-                }
-            }
-        }
-
-        void next_option(){
-            if(selector < battle_options.size() - 1){
-                selector++;
-            }
-        }
-
-        void previews_option(){
-            if(selector > 0){
-                selector--;
-            }            
-        }
-
-        int get_selector(){
-            return selector;
-        }
-
-        void next_binary_option(){
-            if(binary_selector < bool_options.size() - 1){
-                binary_selector++;
-            }
-        }
-
-        void previews_binary_option(){
-            if(binary_selector > 0){
-                binary_selector--;
-            }            
-        }
-
-        int get_binary_selector(){
-            return binary_selector;
-        }
-
-        const vector<string> battle_options = {"ATACK", "HEAL", "STATUS"};
-        const vector<string> bool_options = {"YES", "NO"};
-
-    private:
-        int selector = 0;
-        int binary_selector = 0;
-
-};
-
 class BattleSystem{
     public:
         Hero *player;
         Monster *monster;
+        
         BattleSystem(){
             srand(time(0));
             player = NULL;
@@ -112,18 +46,17 @@ class BattleSystem{
             defeat_count = 0;
         }
 
-        BattleSystem(Hero& player, Monster& enemy){
-            srand(time(0));
+        void set_player(Hero& player){
             this->player = &player;
+        }
+
+        void set_enemy(Monster& enemy){
             this->monster = &enemy;
-            victory_count = 0;
-            defeat_count = 0;
         }
 
         string player_attack(){
             int damage = damage_formula(player->get_attk().get_value(), monster->get_def().get_value());
             monster->set_hp(monster->get_hp().get_value() - damage);
-            printf("%s\n", monster->repr().c_str());
             return "PLAYER ATTACK, Does " + to_string(damage) + " points of damage";
         }
 
@@ -178,15 +111,390 @@ class BattleSystem{
         }
 }; 
 
-int main(int argc, char* args[] ){
-    string PATH_ICON = "icon.bmp";
-    string FONT_PATH_REGULAR = "fonts/LiberationMono-Regular.ttf";
+class BattleLayout{
+    public:
+        vector<string> mesages;
+        BattleSystem battle;
+        TextureText *text;
 
-    int LAYOUT_COMBAT = 0;
-    int LAYOUT_STATUS = 1;
-    int LAYOUT_GAME_OVER = 2;
-    int layout_current = 0;
-    int FONT_SIZE = 18;
+        const enum ACTIONS{
+            ATACK,
+            HEAL,
+            STATUS,
+
+            TOTAL_ACTIONS
+        };
+
+        string action_names[TOTAL_ACTIONS] = {
+            "ATTACK",
+            "HEAL",
+            "STATUS"
+        };
+
+        int selector;
+
+        const Uint8* currentKeyStates;
+        int* layout_current;
+        controls* controls_rules;
+        controls_locks* locks;
+
+        BattleLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+            selector = 0;
+        }
+
+        ~BattleLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+            selector = 0;
+        }
+
+        BattleLayout(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            init(layout_current, controls_rules, locks, text_obj);
+        }
+
+        void init(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            currentKeyStates = SDL_GetKeyboardState(NULL);
+            this->layout_current = &layout_current;
+            this->controls_rules = &controls_rules;
+            this->locks          = &locks;
+            this->text           = text_obj;
+
+            selector = 0;
+        }
+
+        void next_option(){
+            if(selector < TOTAL_ACTIONS - 1){
+                selector++;
+            }
+        }
+
+        void previews_option(){
+            if(selector > 0){
+                selector--;
+            }            
+        }
+
+        void action(){
+            if(selector==ATACK){
+                mesages.clear();
+                mesages.push_back(battle.player_attack());
+                mesages.push_back(battle.enemy_attack());
+            }else if(selector==HEAL){
+                mesages.clear();
+                mesages.push_back(battle.player_heal());
+                mesages.push_back(battle.enemy_attack());
+            }else if (selector==STATUS){
+                *layout_current = LAYOUT_STATUS;
+            }
+
+            if (battle.check_battle_end()){
+                battle.restore_characters();
+                *layout_current = LAYOUT_GAME_OVER;
+            }
+        }
+
+        void check_player_action(){
+            if( (currentKeyStates[controls_rules->move_right]) && (!locks->move_right) ){
+                next_option();
+                locks->move_right = true;
+            }else if( (currentKeyStates[controls_rules->move_left]) && (!locks->move_left) ){
+                previews_option();
+                locks->move_left = true;
+            }
+
+            if( (currentKeyStates[controls_rules->action_button]) && (!locks->action_button) ){
+                action();
+                locks->action_button = true;
+            }
+
+            if(( !currentKeyStates[controls_rules->move_right] ) && (locks->move_right)){
+                locks->move_right = false;
+            }
+            if(( !currentKeyStates[controls_rules->move_left] ) && (locks->move_left)){
+                locks->move_left = false;
+            }
+            if(( !currentKeyStates[controls_rules->action_button] ) && (locks->action_button)){
+                locks->action_button = false;
+            }
+            if(( !currentKeyStates[controls_rules->cancel_button] ) && (locks->cancel_button)){
+                locks->cancel_button = false;
+            }
+        }
+
+        void render(int x, int y){
+            int acc_x = 0;
+            int acc_y = 0;
+            int padding = 20;
+
+
+            text[TEXT_WHITE].create_texture((battle.player)->repr());
+            text[TEXT_WHITE].render(x, y);
+            acc_y += text[TEXT_WHITE].rect.h;
+
+            text[TEXT_WHITE].create_texture((battle.monster)->repr());
+            text[TEXT_WHITE].render(x, y + acc_y);
+            acc_y += text[TEXT_WHITE].rect.h;
+
+
+            for (int i=0; i<TOTAL_ACTIONS; i++){
+                if (i==selector){
+                    text[TEXT_RED].create_texture(action_names[i]);
+                    text[TEXT_RED].render(x + acc_x, y + acc_y);
+                    acc_x += text[TEXT_RED].rect.w + padding;
+                }else{
+                    text[TEXT_WHITE].create_texture(action_names[i]);
+                    text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+                    acc_x += text[TEXT_WHITE].rect.w + padding;
+                }
+            }
+
+            acc_x = 0;
+            acc_y += text[TEXT_WHITE].rect.h + padding;
+
+            for(int i=0;i<mesages.size();i++){
+                text[TEXT_WHITE].create_texture(mesages[i]);
+                text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+                acc_y += text[TEXT_WHITE].rect.h;
+            }
+        }
+
+};
+
+class StatsLayout{
+    public:
+        TextureText *text;
+        const Uint8* currentKeyStates;
+        int* layout_current;
+        controls* controls_rules;
+        controls_locks* locks;
+        Hero* player;
+
+        StatsLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+            player           = NULL;
+        }
+
+        ~StatsLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+            player           = NULL;
+        }
+
+        StatsLayout(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            init(layout_current, controls_rules, locks, text_obj);
+        }
+
+        void init(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            currentKeyStates = SDL_GetKeyboardState(NULL);
+            this->layout_current = &layout_current;
+            this->controls_rules = &controls_rules;
+            this->locks          = &locks;
+            this->text           = text_obj;
+        }
+
+        void set_player(Hero &player){
+            this->player = &player;
+        }
+
+        void action(){
+            *layout_current = LAYOUT_COMBAT;
+        }
+
+        void check_player_action(){
+
+            if( (currentKeyStates[controls_rules->action_button]) && (!locks->action_button) ){
+                action();
+                locks->action_button = true;
+            }
+
+            if(( !currentKeyStates[controls_rules->action_button] ) && (locks->action_button)){
+                locks->action_button = false;
+            }
+        }
+
+        void render(int x, int y){
+            int acc_x = 0;
+            int acc_y = 0;
+
+            text[TEXT_WHITE].create_texture(player->get_name());
+            text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+            acc_y += text[TEXT_WHITE].rect.h;
+
+            vector<Status> player_status = player->get_stats();
+            for(int i=0; i<player_status.size(); i++){
+                string temp_text = player_status[i].get_name() + ": " + to_string(player_status[i].get_value());
+                text[TEXT_WHITE].create_texture(temp_text);
+                text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+                acc_y += text[TEXT_WHITE].rect.h;
+            }
+        }
+};
+
+class GameOverLayout{
+    public:
+        TextureText *text;
+        const Uint8* currentKeyStates;
+        int* layout_current;
+
+        controls* controls_rules;
+        controls_locks* locks;
+
+        const enum ACTIONS{
+            YES,
+            NO,
+
+            TOTAL_ACTIONS
+        };
+
+        string action_names[TOTAL_ACTIONS] = {
+            "YES",
+            "NO"
+        };
+
+        int selector;
+        bool exit;
+
+        GameOverLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+
+            exit = false;
+            selector = 0;
+        }
+
+        ~GameOverLayout(){
+            currentKeyStates = NULL;
+            layout_current   = NULL;
+            controls_rules   = NULL;
+            locks            = NULL;
+            text             = NULL;
+            
+            exit = false;
+            selector = 0;
+        }
+
+        GameOverLayout(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            init(layout_current, controls_rules, locks, text_obj);
+        }
+
+        void init(int &layout_current, controls &controls_rules, controls_locks& locks, TextureText text_obj[]){
+            currentKeyStates = SDL_GetKeyboardState(NULL);
+            this->layout_current = &layout_current;
+            this->controls_rules = &controls_rules;
+            this->locks          = &locks;
+            this->exit           = &exit;
+            this->text           = text_obj;
+
+            exit = false;
+            selector = 0;
+        }
+
+
+        void next_option(){
+            if(selector < TOTAL_ACTIONS - 1){
+                selector++;
+            }
+        }
+
+        void previews_option(){
+            if(selector > 0){
+                selector--;
+            }            
+        }
+
+        bool check_exit(){
+            return exit;
+        }
+
+        void action(){
+            if(selector == YES){
+                *layout_current = LAYOUT_COMBAT;
+            }else if(selector == NO){
+                exit = true;
+            }
+        }
+
+        void check_player_action(){
+            if( (currentKeyStates[ controls_rules->move_right ]) && (!locks->move_right) ){
+                next_option();
+                locks->action_button = true;
+            }else if( (currentKeyStates[controls_rules->move_left]) && (!locks->move_left) ){
+                previews_option();
+                locks->move_left = true;
+            }
+
+            if( (currentKeyStates[controls_rules->action_button]) && (!locks->action_button) ){
+                action();
+                locks->action_button = true;
+            }
+
+            if(( !currentKeyStates[controls_rules->move_right] ) && (locks->move_right)){
+                locks->move_right = false;
+            }
+            if(( !currentKeyStates[controls_rules->move_left] ) && (locks->move_left)){
+                locks->move_left = false;
+            }
+            if(( !currentKeyStates[controls_rules->action_button] ) && (locks->action_button)){
+                locks->action_button = false;
+            }
+        }
+
+        void render(int x, int y){
+            int acc_x = 0;
+            int acc_y = 0;
+            int padding = 10;
+
+            text[TEXT_WHITE].create_texture("GAME OVER");
+            text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+
+            acc_y += text[TEXT_WHITE].rect.h;
+            
+            text[TEXT_WHITE].create_texture("Continue?");
+            text[TEXT_WHITE].render(x + acc_x, y + acc_y);
+
+            acc_y += text[TEXT_WHITE].rect.h + padding;
+
+            for(int i=0; i<TOTAL_ACTIONS;i++){
+                if(i==selector){
+                    text[TEXT_RED].create_texture(action_names[i]);
+                    text[TEXT_RED].render(x + acc_x, y + acc_y + text[TEXT_RED].rect.h);
+                    acc_x += text[TEXT_RED].rect.w + padding;
+                }else{
+                    text[TEXT_WHITE].create_texture(action_names[i]);
+                    text[TEXT_WHITE].render(x + acc_x, y + acc_y + text[TEXT_WHITE].rect.h);
+                    acc_x += text[TEXT_WHITE].rect.w + padding;
+                }
+            }
+        }
+
+};
+
+int main(int argc, char* args[] ){
+    const string GAME_NAME = "Turn Battle System";
+    const string PATH_ICON = "icon.bmp";
+    const string FONT_PATH_REGULAR = "fonts/LiberationMono-Regular.ttf";
+
+    const int SCREEN_WIDTH  = 800;
+    const int SCREEN_HEIGHT = 600;
+    const int FONT_SIZE     =  18;
 
     SDL_Color colors[TOTAL_TEXT] = {
         {0x00, 0x00, 0x00, 0xFF},
@@ -209,179 +517,55 @@ int main(int argc, char* args[] ){
     };
     controls_locks locks;
 
+    int layout_current      = 0;   
+    bool exit               = false;
+
+    // Sub systems init
+    Window window(GAME_NAME, SCREEN_WIDTH, SCREEN_HEIGHT, colors[TEXT_BLACK]);
+    window.set_icon(PATH_ICON);
     
+    TextureText text_normal_obj[TOTAL_TEXT];
+    for(int i=0; i<TOTAL_TEXT; i++){
+        text_normal_obj[i].init(window.get_render(), FONT_PATH_REGULAR, colors[i], FONT_SIZE);
+    }    
+
+    // Game init
     Hero player;
     Monster enemy;
 
     player.init("Player", 10, 3, 1, 1);
     enemy.init("Enemy", 10, 3, 1, 1, 25);
 
-    Window window("Test", 800, 600, colors[TEXT_BLACK]);
-    window.set_icon(PATH_ICON);
-    
-    BattleSystem battle(player, enemy);
-    Menu menu;
+    BattleLayout battle_layout(layout_current, controls_rules, locks, text_normal_obj);
+    battle_layout.battle.set_player(player);
+    battle_layout.battle.set_enemy(enemy);
 
+    StatsLayout stats_layout(layout_current, controls_rules, locks, text_normal_obj);
+    stats_layout.set_player(player);
 
-    // Load Media
-    TextureText text_normal_obj[TOTAL_TEXT];
-
-    for(int i=0; i<TOTAL_TEXT; i++){
-        text_normal_obj[i].init(window.get_render(), FONT_PATH_REGULAR, colors[i], FONT_SIZE);
-    }
-
-
-    int normal_text_color   = TEXT_WHITE;
-    int selected_text_color = TEXT_RED;
-
-    const Uint8* currentKeyStates = NULL;
-
-    vector<string> mesages;
-    bool exit = false;
-    int acc = 0;
+    GameOverLayout gameover_layout(layout_current, controls_rules, locks, text_normal_obj);
 
     while(!exit){
-        if(window.check_exit()){
+        if(window.check_exit() || gameover_layout.check_exit()){
             exit = true;
         }else{
             window.clear_screen();
 
-            
             // Layouts
             if (layout_current == LAYOUT_COMBAT){
-                text_normal_obj[normal_text_color].create_texture(player.repr());
-                text_normal_obj[normal_text_color].render(0, 0);
-                text_normal_obj[normal_text_color].create_texture(enemy.repr());
-                text_normal_obj[normal_text_color].render(0, 0 + text_normal_obj[normal_text_color].rect.h);
-
-
-                menu.display_battle_options(0, 50, text_normal_obj[normal_text_color], text_normal_obj[selected_text_color]);
-
-                acc = 0;
-                for(int i=0;i<mesages.size();i++){
-                    text_normal_obj[normal_text_color].create_texture(mesages[i]);
-                    text_normal_obj[normal_text_color].render(0, 70 + acc);
-                    acc = acc + text_normal_obj[normal_text_color].rect.h + 10;
-                }
-
+                battle_layout.check_player_action();
+                battle_layout.render(0, 0);
             }else if (layout_current == LAYOUT_STATUS){
-                acc = 0;
-                text_normal_obj[normal_text_color].create_texture(player.get_name());
-                text_normal_obj[normal_text_color].render(0, 0+acc);
-                acc = acc + text_normal_obj[normal_text_color].rect.h;
-
-                vector<Status> player_status = player.get_stats();
-                for(int i=0; i<player_status.size(); i++){
-                    string temp_text = player_status[i].get_name() + ": " + to_string(player_status[i].get_value());
-                    text_normal_obj[normal_text_color].create_texture(temp_text);
-                    text_normal_obj[normal_text_color].render(0, 0+acc);
-                    acc = acc + text_normal_obj[normal_text_color].rect.h;
-                }
-
+                stats_layout.check_player_action();
+                stats_layout.render(0, 0);
             }else if(layout_current == LAYOUT_GAME_OVER){
-                text_normal_obj[normal_text_color].create_texture("GAME OVER");
-                text_normal_obj[normal_text_color].render(0, 0);
-
-                acc = text_normal_obj[normal_text_color].rect.h;
-                
-                text_normal_obj[normal_text_color].create_texture("Continue?");
-                text_normal_obj[normal_text_color].render(0, 0 + acc);
-                acc = acc + text_normal_obj[normal_text_color].rect.h + 10;
-
-                int x_acc = 0;
-                for(int i=0; i<menu.bool_options.size();i++){
-                    if(i==menu.get_binary_selector()){
-                        text_normal_obj[selected_text_color].create_texture(menu.bool_options[i]);
-                        text_normal_obj[selected_text_color].render(0 + x_acc, 0 + text_normal_obj[selected_text_color].rect.h + acc);
-                        x_acc = x_acc + text_normal_obj[selected_text_color].rect.w + 10;
-                    }else{
-                        text_normal_obj[normal_text_color].create_texture(menu.bool_options[i]);
-                        text_normal_obj[normal_text_color].render(0 + x_acc, 0 + text_normal_obj[normal_text_color].rect.h + acc);
-                        x_acc = x_acc + text_normal_obj[normal_text_color].rect.w + 10;
-                    }
-                }
-
+                gameover_layout.check_player_action();
+                gameover_layout.render(0, 0);
             }
 
-                    
-            currentKeyStates = SDL_GetKeyboardState( NULL );
-
-            if (layout_current == LAYOUT_COMBAT){
-                if( (currentKeyStates[controls_rules.move_right]) && (!locks.move_right) ){
-                    menu.next_option();
-                    locks.move_right = true;
-                }else if( (currentKeyStates[controls_rules.move_left]) && (!locks.move_left) ){
-                    menu.previews_option();
-                    locks.move_left = true;
-                }
-
-                if( (currentKeyStates[controls_rules.action_button]) && (!locks.action_button) ){
-                    if(menu.get_selector()==menu.ATACK){
-                        mesages.clear();
-                        mesages.push_back(battle.player_attack());
-                        mesages.push_back(battle.enemy_attack());
-                    }else if(menu.get_selector()==menu.HEAL){
-                        mesages.clear();
-                        mesages.push_back(battle.player_heal());
-                        mesages.push_back(battle.enemy_attack());
-                    }else if (menu.get_selector()==menu.STATUS){
-                        layout_current = LAYOUT_STATUS;
-                    }
-
-                    if (battle.check_battle_end()){
-                        battle.restore_characters();
-                        layout_current = LAYOUT_GAME_OVER;
-                    }
-
-                    locks.action_button = true;
-                }
-            }else if (layout_current == LAYOUT_STATUS){
-                if( (currentKeyStates[controls_rules.cancel_button]) && (!locks.cancel_button) ){
-                    layout_current = LAYOUT_COMBAT;
-                    locks.cancel_button = true;
-                }
-            }else if (layout_current == LAYOUT_GAME_OVER){
-                if( (currentKeyStates[ controls_rules.move_right ]) && (!locks.move_right) ){
-                    menu.next_binary_option();
-                    locks.action_button = true;
-                }else if( (currentKeyStates[controls_rules.move_left]) && (!locks.move_left) ){
-                    menu.previews_binary_option();
-                    locks.move_left = true;
-                }
-
-                if( (currentKeyStates[controls_rules.action_button]) && (!locks.action_button) ){
-                    if(menu.get_binary_selector() == menu.YES){
-                        layout_current = LAYOUT_COMBAT;
-                        mesages.clear();
-                    }else if(menu.get_binary_selector() == menu.NO){
-                        exit = true;
-                    }
-                    locks.action_button = true;
-                }
-
-
-            }
-
-            if(( !currentKeyStates[controls_rules.move_right] ) && (locks.move_right)){
-                locks.move_right = false;
-            }
-
-            if(( !currentKeyStates[controls_rules.move_left] ) && (locks.move_left)){
-                locks.move_left = false;
-            }
-
-            if(( !currentKeyStates[controls_rules.action_button] ) && (locks.action_button)){
-                locks.action_button = false;
-            }
-
-            if(( !currentKeyStates[controls_rules.cancel_button] ) && (locks.cancel_button)){
-                locks.cancel_button = false;
-            }
-        
             window.update_screen();
         }
         
-
     }
     return 0;
 }

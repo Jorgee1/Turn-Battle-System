@@ -31,5 +31,12 @@ const enum text_keys{
     TOTAL_TEXT,
 };
 
+const enum LAYOUT_ID{
+    LAYOUT_COMBAT,
+    LAYOUT_STATUS,
+    LAYOUT_GAME_OVER,
+    TOTAL_LAYOUT
+};
+
 
 #endif
