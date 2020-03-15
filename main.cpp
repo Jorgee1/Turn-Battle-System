@@ -94,16 +94,119 @@ class ItemDB{
         }
 };
 
+class InventoryLayout{
+    public:
+        TextureText*               text;
+        controls*        controls_rules;
+        controls_locks*           locks;
+        
+        const Uint8*   currentKeyStates;
 
+        int* layout_current;
+        int selector;
+
+        vector<item>* inventory;
+
+        InventoryLayout(){
+            this->text           = NULL;
+            this->controls_rules = NULL;
+            this->locks          = NULL;
+            currentKeyStates     = NULL;
+            layout_current       = NULL;
+            selector             =    0;
+        }
+
+        ~InventoryLayout(){
+            this->text           = NULL;
+            this->controls_rules = NULL;
+            this->locks          = NULL;
+            currentKeyStates     = NULL;
+            layout_current       = NULL;
+            selector             =    0;
+        }
+
+        InventoryLayout(
+            int &layout_current,
+            controls &controls_rules,
+            controls_locks &locks,
+            TextureText &text
+        ){
+            this->text           = &text;
+            this->controls_rules = &controls_rules;
+            this->locks          = &locks;
+            this->layout_current = &layout_current;
+            currentKeyStates     = SDL_GetKeyboardState(NULL);
+            selector             = 0;
+        }
+
+
+        void next_option(){
+
+        }
+
+        void previews_option(){
+        
+        }
+
+        void action(){
+
+        }
+
+        void cancel (){
+            layout_current = 0;
+        }
+
+        void check_player_action(){
+            if( (currentKeyStates[controls_rules->move_right]) && (!locks->move_right) ){
+                next_option();
+                locks->move_right = true;
+            }else if( (currentKeyStates[controls_rules->move_left]) && (!locks->move_left) ){
+                previews_option();
+                locks->move_left = true;
+            }
+
+            if( (currentKeyStates[controls_rules->action_button]) && (!locks->action_button) ){
+                action();
+                locks->action_button = true;
+            }
+
+            if( (currentKeyStates[controls_rules->action_button]) && (!locks->action_button) ){
+                cancel();
+                locks->action_button = true;
+            }
+
+            if(( !currentKeyStates[controls_rules->move_right] ) && (locks->move_right)){
+                locks->move_right = false;
+            }
+            if(( !currentKeyStates[controls_rules->move_left] ) && (locks->move_left)){
+                locks->move_left = false;
+            }
+            if(( !currentKeyStates[controls_rules->action_button] ) && (locks->action_button)){
+                locks->action_button = false;
+            }
+            if(( !currentKeyStates[controls_rules->cancel_button] ) && (locks->cancel_button)){
+                locks->cancel_button = false;
+            }
+        }
+
+        void render(int x, int y){
+            int acc_x = 0;
+            int acc_y = 0;
+        }
+        
+};
 
 int main(int argc, char* args[] ){
-    const string GAME_NAME = "Turn Battle System";
-    const string PATH_ICON = "icon.bmp";
+    const string GAME_NAME         = "Turn Battle System";
+    const string PATH_ICON         = "icon.bmp";
     const string FONT_PATH_REGULAR = "fonts/LiberationMono-Regular.ttf";
 
     const int SCREEN_WIDTH  = 800;
     const int SCREEN_HEIGHT = 600;
     const int FONT_SIZE     =  18;
+    int layout_current      =   0;
+
+    bool exit = false;
 
     SDL_Color colors[TOTAL_TEXT] = {
         {0x00, 0x00, 0x00, 0xFF},
@@ -113,6 +216,7 @@ int main(int argc, char* args[] ){
         {0xFF, 0xFF, 0xFF, 0xFF}
     };
 
+    controls_locks locks;
     controls controls_rules = {
         SDL_SCANCODE_Z,
         SDL_SCANCODE_X,
@@ -124,10 +228,9 @@ int main(int argc, char* args[] ){
         SDL_SCANCODE_LEFT,
         SDL_SCANCODE_RIGHT
     };
-    controls_locks locks;
 
-    int layout_current      = 0;   
-    bool exit               = false;
+
+
 
     // Sub systems init
     Window window(GAME_NAME, SCREEN_WIDTH, SCREEN_HEIGHT, colors[TEXT_BLACK]);
@@ -178,6 +281,8 @@ int main(int argc, char* args[] ){
             }else if(layout_current == LAYOUT_GAME_OVER){
                 gameover_layout.check_player_action();
                 gameover_layout.render(0, 0);
+            }else if(layout_current == LAYOUT_INVENTORY){
+
             }
 
             window.update_screen();
